@@ -16,13 +16,13 @@ OptionParser.new do |opts|
     end
 end.parse!
 
-# Create a new MySQL client
-client = Mysql2::Client.new(
-    YAML.load_file(
-        File.join(__dir__, 'database.yml'),
-        symbolize_names: true
-    )
+config = YAML.load_file(
+    File.join(__dir__, 'config.yml'),
+    symbolize_names: true
 )
+
+# Create a new MySQL client
+client = Mysql2::Client.new(config[:database])
 
 currency_data = client.query(<<~SQL).map { |row| "<b>#{row['fullname']}:</b> #{row['total'].to_f.round(2)}" unless row['total'].zero? }
     SELECT c.fullname, sum(s.quantity_num/s.quantity_denom) as total
@@ -34,10 +34,7 @@ currency_data = client.query(<<~SQL).map { |row| "<b>#{row['fullname']}:</b> #{r
     GROUP BY a.commodity_guid
 SQL
 
-accounts_to_track = YAML.load_file(
-    File.join(__dir__, '30days.yml'),
-    symbolize_names: true
-)[:accounts] || []
+accounts_to_track = config[:watchlist] || []
 
 savings_summary = client.query(<<~SQL)
     SELECT
@@ -72,12 +69,7 @@ case options[:output]
 when :stdout
     puts html
 when :chat
-    config = YAML.load_file(
-        File.join(__dir__, 'telegram.yml'),
-        symbolize_names: true
-    )
-    
-    Telegram::Bot::Client.run(config[:token]) do |bot|
-        bot.api.send_message(chat_id: config[:chat_id], text: html, parse_mode: 'HTML')
+    Telegram::Bot::Client.run(config[:telegram][:token]) do |bot|
+        bot.api.send_message(chat_id: config[:telegram][:chat_id], text: html, parse_mode: 'HTML')
     end
 end
