@@ -1,7 +1,7 @@
 FROM ruby:3.2
 
 WORKDIR /usr/src/app
-CMD ["ruby", "app.rb"]
+ENTRYPOINT ["ruby", "app.rb"]
 
 COPY Gemfile ./
 RUN bundle install
