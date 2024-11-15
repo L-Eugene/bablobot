@@ -24,14 +24,17 @@ config = YAML.load_file(
 # Create a new MySQL client
 client = Mysql2::Client.new(config[:database])
 
-currency_data = client.query(<<~SQL).map { |row| "<b>#{row['fullname']}:</b> #{row['total'].to_f.round(2)}" unless row['total'].zero? }
-    SELECT c.fullname, sum(s.quantity_num/s.quantity_denom) as total
+currency_data = client.query(<<~SQL).map { |row| "<b>#{row['mnemonic']}:</b> #{row['total'].to_f.round(2)}" }
+    SELECT
+        c.mnemonic,
+        sum(s.quantity_num/s.quantity_denom) as total
     FROM
         splits s
         LEFT JOIN accounts a ON s.account_guid = a.guid
         LEFT JOIN commodities c ON a.commodity_guid = c.guid
     WHERE a.account_type IN ('ASSET', 'CASH', 'STOCK')
     GROUP BY a.commodity_guid
+    HAVING total > 0
 SQL
 
 accounts_to_track = config[:watchlist] || []
