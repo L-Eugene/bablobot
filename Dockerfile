@@ -7,3 +7,4 @@ COPY Gemfile ./
 RUN bundle install
 
 COPY app.rb ./
+COPY actions/ ./actions/
