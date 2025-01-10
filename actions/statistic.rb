@@ -33,8 +33,8 @@ class ActionStatistic < Action
         savings_summary = savings_summary.map do |row|
             row['total_30_days_ago'] = row['total_30_days_ago'].to_f.round(2)
             row['total_today'] = row['total_today'].to_f.round(2)
-            delta = (row['total_30_days_ago'].to_f < row['total_today'].to_f ? '+' : '') + (row['total_today'] - row['total_30_days_ago']).to_s
-            "<b>#{row['name']}:</b> #{row['total_today']} [Δ₃₀ = #{delta}] "
+            delta = row['total_today'] - row['total_30_days_ago']
+            "<b>#{row['name']}:</b> #{row['total_today']} [Δ₃₀ = #{'+' if delta.positive}#{delta.round(2)}] "
         end
 
         html = <<~HTML
