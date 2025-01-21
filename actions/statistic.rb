@@ -34,7 +34,7 @@ class ActionStatistic < Action
             row['total_30_days_ago'] = row['total_30_days_ago'].to_f.round(2)
             row['total_today'] = row['total_today'].to_f.round(2)
             delta = row['total_today'] - row['total_30_days_ago']
-            "<b>#{row['name']}:</b> #{row['total_today']} [Δ₃₀ = #{'+' if delta.positive}#{delta.round(2)}] "
+            "<b>#{row['name']}:</b> #{row['total_today']} [Δ₃₀ = #{'+' if delta.positive?}#{delta.round(2)}] "
         end
 
         html = <<~HTML
