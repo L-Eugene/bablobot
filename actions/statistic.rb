@@ -1,23 +1,21 @@
 require 'telegram/bot'
+require_relative 'statistic_formatter_currency'
+require_relative 'statistic_formatter_stocks'
+require_relative 'statistic_formatter_savings'
 
 class ActionStatistic < Action
     def run
-        currency_data = @client.query(<<~SQL).map { |row| "<b>#{row['mnemonic']}:</b> #{row['total'].to_f.round(2)}" }
-            SELECT
-                c.mnemonic,
-                sum(s.quantity_num/s.quantity_denom) as total
-            FROM
-                splits s
-                LEFT JOIN accounts a ON s.account_guid = a.guid
-                LEFT JOIN commodities c ON a.commodity_guid = c.guid
-            WHERE a.account_type IN ('ASSET', 'CASH', 'STOCK')
-            GROUP BY a.commodity_guid
-            HAVING total > 0
-        SQL
+        currency_data = StatisticFormatterCurrency.new(@client)
+        
+        stocks_data = StatisticFormatterStocks.new(@client)
 
         accounts_to_track = @config[:watchlist] || []
 
-        savings_summary = @client.query(<<~SQL)
+        savings_summary = StatisticFormatterSavings.new(@client) do |row|
+            accounts_to_track.include?(row['name'])
+        end
+        
+        @client.query(<<~SQL)
             SELECT
                 a.name,
                 sum(s.quantity_num/s.quantity_denom) as total_today,
@@ -30,17 +28,12 @@ class ActionStatistic < Action
             GROUP BY a.name
         SQL
 
-        savings_summary = savings_summary.map do |row|
-            row['total_30_days_ago'] = row['total_30_days_ago'].to_f.round(2)
-            row['total_today'] = row['total_today'].to_f.round(2)
-            delta = row['total_today'] - row['total_30_days_ago']
-            "<b>#{row['name']}:</b> #{row['total_today']} [Δ₃₀ = #{'+' if delta.positive?}#{delta.round(2)}] "
-        end
-
         html = <<~HTML
-            #{currency_data.compact.join("\n")}
+            #{currency_data.data.join("\n")}
         
-            #{savings_summary.join("\n")}
+            #{stocks_data.data.join("\n")}
+
+            #{savings_summary.data.join("\n")}
         HTML
 
         case @options[:output]
